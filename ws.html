@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ws Test</title>
+    <link rel="stylesheet" href="https://cdn.bootcss.com/bootstrap/3.3.7/css/bootstrap.min.css">
+</head>
+<body>
+<div class="container" id="vm">
+    <div class="form-horizontal">
+        <div class="form-group">
+            <div class="page-header">
+                <h1>WebSocket 测试
+                    <small>v1.0</small>
+                </h1>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-10">
+                <input class="form-control" placeholder="ws://192.168.0.122:6789" v-model="wsUrl" :disabled="connected">
+            </div>
+            <div class="col-sm-2">
+                <button class="btn btn-block"
+                        :class="connected ? 'btn-danger' : 'btn-primary'"
+                        @click="toggleConnect()"
+                        v-text="connected ? '断开' : '连接'">
+                </button>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-12">
+                <div class="panel panel-default">
+                    <div class="panel-heading">消息列表</div>
+                    <div class="panel-body" style="height: 300px; overflow-y: scroll;">
+                        <div>
+                            <p v-for="msg in msgList" v-html="msg"></p>
+                        </div>
+                        <span ref="msgEnd"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-12">
+                <input class="form-control" placeholder="在这里输入消息..." v-model="msg" @keyup.enter="sendMsg()" :disabled="!connected">
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-12">
+                <button class="btn btn-success btn-block" @click="sendMsg()" :disabled="!connected">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="myAlert" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">提示</h4>
+                </div>
+                <div class="modal-body text-center" v-text="alertMsg">
+
+                </div>
+                <div class="modal-footer">
+                    <div class="text-center">
+                        <button type="button" class="btn btn-primary" data-dismiss="modal">确定</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+<script src="https://cdn.bootcss.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+<script src="https://cdn.bootcss.com/vue/2.5.0/vue.min.js"></script>
+<script>
+    new Vue({
+        el: '#vm',
+        data: {
+            wsUrl: '192.168.20.220:8282',
+            connected: false,
+            ws: null,
+            msgList: [],
+            msg: '',
+            alertMsg: '提示信息'
+        },
+        methods: {
+            toggleConnect: function () {
+                var vm = this;
+                if (!this.connected) {
+                    // 假设服务端ip为127.0.0.1
+                    this.ws = new WebSocket("ws://" + this.wsUrl);
+                    this.ws.onopen = function () {
+                        vm.connected = true;
+                        vm.updateMsg("<span class='text-success'>[连接成功]</span>");
+                    };
+                    this.ws.onmessage = function (e) {
+                        vm.updateMsg("<span class='text-primary'>[server]</span> " + e.data);
+                    };
+                    this.ws.onclose = function () {
+                        vm.connected = false;
+                        vm.updateMsg("<span class='text-danger'>[连接断开]</span>");
+                    }
+                } else {
+                    this.ws.close();
+                }
+            },
+            sendMsg: function () {
+                if (!this.connected) {
+                    this.showAlert(666);
+                    return;
+                }
+                this.msg = $.trim(this.msg);
+                if (this.msg) {
+                    this.ws.send(this.msg);
+                    this.updateMsg("<span class='text-muted'>[我]</span> " + this.msg);
+                    this.msg = '';
+                }
+            },
+            updateMsg: function (msg) {
+                var vm = this;
+                this.msgList.push(msg);
+                Vue.nextTick(function () {
+                    vm.$refs.msgEnd.scrollIntoView({block: "end", behavior: "smooth"});
+                });
+            },
+            showAlert: function (msg) {
+                this.alertMsg = msg | this.alertMsg;
+                $('#myAlert').modal();
+            }
+        }
+    });
+</script>
+</body>
+</html>
